@@ -1,0 +1,160 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description" : "Docker EC2 Spun up with Cloud formation",
+	"Parameters": {
+		"InstanceType": {
+			"Default" : "m4.2xlarge",
+			"Description": "AWS instance to be launched",
+			"Type": "String"
+		},
+		"Enviroment":{
+			"AllowedValues": [
+				"prod",
+				"preprod",
+				"dev"
+			],
+			"Default":"dev",
+			"Description":"Choose the dev enviro we are using",
+			"Type" : "String"
+		},
+		"Datacenter": {
+			"Default":"aws-east",
+			"Type" : "String"
+		},
+    "ChefRole": {
+      "Default": "calamari_docker_install",
+      "Description": "What is your chef role?",
+      "Type": "String"
+    },
+    "ChefEnvironment": {
+      "Default": "calamari",
+      "Description": "What is your chef environment?",
+      "Type": "String"
+    },
+		"KeyName":{
+			"Default": "kpj767",
+			"Type": "AWS::EC2::KeyPair::KeyName"
+		},
+		"InstanceProfile":{
+			"Default":"CapOne-Card-Dev-CustomRole-mm-default",
+			"Type":"String"
+		},
+		"ImageId":{
+			"Default":"ami-b20e44a4",
+      "Description":"Image for EC2 instances. Default is Card Dev",
+      "Type":"AWS::EC2::Image::Id"
+    },
+    "SecurityGroups":{
+			"Default": "sg-00d88764",
+      "Description":"Designated Security Group of user",
+      "Type":"List<AWS::EC2::SecurityGroup::Id>"
+    },
+    "Subnets":{
+			"Default": "subnet-c96114e2",
+      "Description":"Designated subnet of user",
+      "Type":"AWS::EC2::Subnet::Id"
+    },
+    "CMDBEnvironment":{
+			"Default":"ENVPCARDAPPFRAUD",
+      "Description":"CMDBEnvironment",
+      "Type":"String"
+    },
+    "ASV":{
+			"Default":"ASVCARDAPPFRAUD",
+      "Description":"ASV",
+      "Type":"String"
+    },
+    "OwnerContact":{
+			"Default":"Peter.lee3@capitalone.com",
+			"Description":"Owner of Cluster",
+			"Type":"String"
+		}
+	},
+  "Resources": {
+    "Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Metadata": {
+        "Comment": "Deployment Environment"
+      },
+      "Properties": {
+        "IamInstanceProfile": {
+          "Ref":"InstanceProfile"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "SubnetId": {
+          "Ref":"Subnets"
+        },
+        "ImageId": {
+          "Ref":"ImageId"
+        },
+        "SecurityGroupIds": {
+          "Ref":"SecurityGroups"
+        },
+        "Tags": [
+          {
+            "Key": "CMDBEnvironment",
+            "Value": {
+              "Ref":"CMDBEnvironment"
+            }
+          },
+          {
+            "Key": "ASV",
+            "Value": {
+              "Ref":"ASV"
+            }
+          },
+          {
+            "Key": "OwnerContact",
+            "Value": {
+              "Ref":"OwnerContact"
+            }
+          },
+          {
+            "Key": "StackName",
+            "Value": "DockerStack"
+          },
+          {
+            "Key": "Name",
+            "Value": "Intern Docker Card Dev"
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "\n",
+              [
+                "#!/bin/bash -v",
+                "export HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname | cut -f1 -d. | sed 's/-10//')",
+                "hostname $HOSTNAME",
+                "echo $HOSTNAME > /etc/hostname",
+                "yum update -y",
+                "yum install -y wget",
+                "yum install -y libtool-ltdl",
+                "yum install -y libseccomp",
+                "yum-config-manager --enable rhui-REGION-rhel-server-extras",
+								"yum install -y docker",
+								"systemctl start docker"
+              ]
+            ]
+          }
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "Instance": {
+      "Value": {
+        "Fn::GetAtt": [
+          "Instance",
+          "PrivateIp"
+        ]
+      },
+      "Description": "Private IP"
+    }
+  }
+}
